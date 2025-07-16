@@ -35,7 +35,7 @@ npm install express
 ```
 Se você estiver recebendo os dados do formulário via POST, precisará de um middleware para interpretar o corpo da requisição. O Express já inclui o express.urlencoded.
 
-**Observação:** não devem ser utilizadas outras dependências além do express.
+**Observação:** Nessa etapa, além das dependências necessárias, você está livre para usar as que preferir
 
 **3. Crie o servidor**
 
