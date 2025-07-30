@@ -2,25 +2,23 @@ const express = require('express');
 const app = express();
 const PORT = 3000;
 
-// Importação das rotas da sua aplicação
-const agentesRouter = require('./routes/agentesRouter');
-const casosRouter = require('./routes/casosRouter');
+// Correção aqui: Os nomes dos arquivos agora estão no plural (agentesRoutes, casosRoutes)
+const agentesRoutes = require('./routes/agentesRoutes');
+const casosRoutes = require('./routes/casosRoutes');
 
-// Importação dos módulos do Swagger para a documentação
+// Importação do Swagger
 const swaggerUi = require('swagger-ui-express');
-const swaggerDocs = require('./docs/swagger'); // Garante que o caminho para seu arquivo de configuração do swagger está correto
+const swaggerDocs = require('./docs/swagger');
 
-// Middleware para o Express entender JSON no corpo das requisições
 app.use(express.json());
 
-// Rota para servir a documentação da API
+// Rota da documentação
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Middlewares para as rotas de agentes e casos
-app.use(agentesRouter);
-app.use(casosRouter);
+// Correção aqui: Usando as variáveis com os nomes corretos
+app.use(agentesRoutes);
+app.use(casosRoutes);
 
-// Inicia o servidor na porta definida
 app.listen(PORT, () => {
     console.log(`Servidor do Departamento de Polícia rodando em http://localhost:${PORT}`);
 });
