@@ -1,19 +1,22 @@
 const express = require('express');
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./docs/swagger'); // Vamos criar este arquivo depois
-const agentesRouter = require('./routes/agentesRoutes');
-const casosRouter = require('./routes/casosRoutes');
-
 const app = express();
 const PORT = 3000;
 
-// Middleware para interpretar o corpo da requisição em JSON
+// Importação das rotas da sua aplicação
+const agentesRouter = require('./routes/agentesRouter');
+const casosRouter = require('./routes/casosRouter');
+
+// Importação dos módulos do Swagger para a documentação
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocs = require('./docs/swagger'); // Garante que o caminho para seu arquivo de configuração do swagger está correto
+
+// Middleware para o Express entender JSON no corpo das requisições
 app.use(express.json());
 
-// Rota para a documentação da API com Swagger
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Rota para servir a documentação da API
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Adiciona os roteadores para agentes e casos na aplicação
+// Middlewares para as rotas de agentes e casos
 app.use(agentesRouter);
 app.use(casosRouter);
 
