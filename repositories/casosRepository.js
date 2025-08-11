@@ -1,7 +1,25 @@
+// repositories/casosRepository.js - VERSÃO OTIMIZADA
 const db = require('../db/db');
 
-const getAllCasos = async () => {
-  return await db('casos').select('*');
+const getAllCasos = async (filters = {}) => {
+  const query = db('casos').select('*');
+
+  if (filters.agente_id) {
+    query.where('agente_id', filters.agente_id);
+  }
+
+  if (filters.status) {
+    query.where('status', 'ilike', filters.status);
+  }
+
+  if (filters.q) {
+    query.where(function() {
+      this.where('titulo', 'ilike', `%${filters.q}%`)
+          .orWhere('descricao', 'ilike', `%${filters.q}%`);
+    });
+  }
+  
+  return await query;
 };
 
 const getCasoById = async (id) => {

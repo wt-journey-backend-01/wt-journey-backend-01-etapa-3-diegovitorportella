@@ -1,9 +1,27 @@
+// repositories/agentesRepository.js - VERSÃO COM BÔNUS
 const db = require('../db/db');
 
-const getAllAgentes = async () => {
-  return await db('agentes').select('*');
+const getAllAgentes = async (filters = {}) => {
+    const query = db('agentes').select('*');
+
+    // Bônus: Filtrar por cargo
+    if (filters.cargo) {
+        query.where('cargo', 'ilike', filters.cargo);
+    }
+
+    // Bônus: Ordenar por data de incorporação
+    if (filters.sort) {
+        const order = filters.sort.startsWith('-') ? 'desc' : 'asc';
+        const column = order === 'desc' ? filters.sort.substring(1) : filters.sort;
+        if (column === 'dataDeIncorporacao') {
+            query.orderBy(column, order);
+        }
+    }
+
+    return await query;
 };
 
+// ... (o resto do arquivo permanece igual)
 const getAgenteById = async (id) => {
   return await db('agentes').where({ id }).first();
 };
