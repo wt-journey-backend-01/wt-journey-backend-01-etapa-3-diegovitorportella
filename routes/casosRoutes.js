@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const casosController = require('../controllers/casosController');
 
-// O prefixo '/casos' foi removido daqui.
+// O prefixo '/casos' foi removido. As rotas agora são relativas.
 router.get('/', casosController.getAllCasos);
 router.post('/', casosController.createCaso);
 router.get('/:id', casosController.getCasoById);

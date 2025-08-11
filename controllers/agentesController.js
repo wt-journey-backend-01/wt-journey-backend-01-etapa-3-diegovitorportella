@@ -2,14 +2,18 @@
 const agentesRepository = require('../repositories/agentesRepository');
 const errorHandler = require('../utils/errorHandler');
 
+// Dentro de controllers/agentesController.js, ajuste a função getAllAgentes
+
 async function getAllAgentes(req, res) {
   try {
-    const agentes = await agentesRepository.getAllAgentes();
+    const agentes = await agentesRepository.getAllAgentes(req.query); // Passa a query para o repositório
     res.status(200).json(agentes);
   } catch (error) {
     errorHandler(res, error);
   }
 }
+
+// O resto do arquivo já está correto
 
 async function getAgenteById(req, res) {
   try {
