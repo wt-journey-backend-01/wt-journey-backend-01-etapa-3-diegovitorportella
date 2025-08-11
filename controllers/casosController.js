@@ -1,5 +1,4 @@
-// controllers/casosController.js - VERSÃO CORRIGIDA E MELHORADA
-
+// controllers/casosController.js - VERSÃO DEFINITIVA
 const casosRepository = require('../repositories/casosRepository');
 const agentesRepository = require('../repositories/agentesRepository');
 const errorHandler = require('../utils/errorHandler');
@@ -7,27 +6,8 @@ const errorHandler = require('../utils/errorHandler');
 // Função para listar todos os casos
 async function getAllCasos(req, res) {
     try {
-        // A lógica de filtros foi movida para o repositório para eficiência,
-        // mas para passar nos testes, vamos filtrar aqui após buscar todos.
         const casos = await casosRepository.getAllCasos();
-        const { agente_id, status, q } = req.query;
-
-        let casosFiltrados = casos;
-
-        if (agente_id) {
-            casosFiltrados = casosFiltrados.filter(caso => caso.agente_id == agente_id);
-        }
-        if (status) {
-            casosFiltrados = casosFiltrados.filter(caso => caso.status.toLowerCase() === status.toLowerCase());
-        }
-        if (q) {
-            casosFiltrados = casosFiltrados.filter(caso =>
-                caso.titulo.toLowerCase().includes(q.toLowerCase()) ||
-                caso.descricao.toLowerCase().includes(q.toLowerCase())
-            );
-        }
-
-        res.status(200).json(casosFiltrados);
+        res.status(200).json(casos);
     } catch (error) {
         errorHandler(res, error);
     }
@@ -37,6 +17,8 @@ async function getAllCasos(req, res) {
 async function getCasoById(req, res) {
     try {
         const id = parseInt(req.params.id);
+        if (isNaN(id)) return res.status(400).json({ message: 'ID do caso inválido.' });
+
         const caso = await casosRepository.getCasoById(id);
         if (!caso) {
             return res.status(404).json({ message: 'Caso não encontrado.' });
@@ -51,6 +33,8 @@ async function getCasoById(req, res) {
 async function getAgenteByCasoId(req, res) {
     try {
         const caso_id = parseInt(req.params.caso_id);
+        if (isNaN(caso_id)) return res.status(400).json({ message: 'ID do caso inválido.' });
+
         const caso = await casosRepository.getCasoById(caso_id);
         if (!caso) {
             return res.status(404).json({ message: 'Caso não encontrado.' });
@@ -70,7 +54,6 @@ async function createCaso(req, res) {
     try {
         const { titulo, descricao, status, agente_id } = req.body;
         
-        // Validação de campos
         if (!titulo || !descricao || !status || !agente_id) {
             return res.status(400).json({ message: 'Campos obrigatórios ausentes.' });
         }
@@ -90,28 +73,13 @@ async function createCaso(req, res) {
     }
 }
 
-// Função para atualizar um caso por completo (PUT)
+// Função para atualizar um caso (PUT/PATCH)
 async function updateCaso(req, res) {
     try {
         const id = parseInt(req.params.id);
-        const dados = req.body;
+        if (isNaN(id)) return res.status(400).json({ message: 'ID do caso inválido.' });
         
-        const casoAtualizado = await casosRepository.updateCaso(id, dados);
-        if (!casoAtualizado) {
-            return res.status(404).json({ message: 'Caso não encontrado.' });
-        }
-        res.status(200).json(casoAtualizado);
-    } catch (error) {
-        errorHandler(res, error);
-    }
-}
-
-// Função para atualizar um caso parcialmente (PATCH)
-async function patchCaso(req, res) {
-    try {
-        const id = parseInt(req.params.id);
         const dados = req.body;
-
         if (dados.status && dados.status !== 'aberto' && dados.status !== 'solucionado') {
             return res.status(400).json({ message: "O campo 'status' pode ser somente 'aberto' ou 'solucionado'." });
         }
@@ -130,6 +98,8 @@ async function patchCaso(req, res) {
 async function deleteCaso(req, res) {
     try {
         const id = parseInt(req.params.id);
+        if (isNaN(id)) return res.status(400).json({ message: 'ID do caso inválido.' });
+
         const deletado = await casosRepository.deleteCaso(id);
         if (!deletado) {
             return res.status(404).json({ message: 'Caso não encontrado.' });
@@ -146,6 +116,6 @@ module.exports = {
     getAgenteByCasoId,
     createCaso,
     updateCaso,
-    patchCaso,
+    patchCaso: updateCaso, // Reutiliza a mesma função para PUT e PATCH
     deleteCaso
 };
