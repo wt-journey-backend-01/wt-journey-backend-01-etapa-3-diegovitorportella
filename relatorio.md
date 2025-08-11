@@ -1,40 +1,42 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 8 créditos restantes para usar o sistema de feedback AI.
+Você tem 7 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para diegovitorportella:
 
 Nota final: **27.5/100**
 
-Olá, diegovitorportella! 👋✨
+# Feedback para você, diegovitorportella! 🚀👮‍♂️
 
-Primeiramente, parabéns pelo esforço em montar essa API para o Departamento de Polícia! 🚓💻 É muito legal ver você trabalhando com Express.js, organizando rotas, controladores e repositórios, além de implementar validações e tratamento de erros. Isso mostra que você está caminhando bem para construir APIs robustas e escaláveis. 🎉👏
-
----
-
-## O que você mandou muito bem! 👏🎯
-
-- **Organização do código:** Você estruturou seu projeto com rotas, controllers e repositories, exatamente como esperado. Isso facilita demais a manutenção e evolução do código.
-- **Uso do Express e Middlewares:** O `express.json()` está corretamente configurado no `server.js`, e as rotas estão sendo usadas com os prefixos certos (`/agentes` e `/casos`).
-- **Validações e tratamento de erros:** Vi que você fez um bom trabalho validando os campos obrigatórios, retornando `400 Bad Request` para payloads inválidos e `404 Not Found` para IDs que não existem, tanto para agentes quanto para casos.
-- **Implementação dos métodos HTTP:** Você implementou os métodos GET, POST, PUT, PATCH e DELETE para os recursos principais, o que é essencial para uma API RESTful.
-- **Bônus parcialmente implementado:** Você tentou implementar filtros na listagem de casos e até o endpoint para buscar o agente responsável por um caso, o que é um diferencial bacana! 👍
+Olá! Primeiro, quero te parabenizar pelo esforço e pela organização geral do seu projeto! 🎉👏 Você estruturou bem seu código com rotas, controllers e repositories, e isso é fundamental para manter o código limpo e escalável. Também percebi que você implementou vários endpoints importantes para agentes e casos, além de já ter se aventurado nos bônus, como filtros e buscas, o que é super legal! 🕵️‍♂️✨
 
 ---
 
-## Agora, vamos juntos entender onde seu código pode melhorar para destravar tudo? 🕵️‍♂️🔍
+## O que está indo muito bem! 🎯
 
-### 1. IDs de agentes e casos precisam ser UUIDs, não números inteiros
+- Seu `server.js` está bem organizado, com importação correta das rotas e do Swagger para documentação. Isso mostra que você está atento à experiência do desenvolvedor e à organização do projeto.
+- Os controllers usam async/await e tratamento de erros com um middleware específico (`errorHandler`), o que é excelente para manter o código limpo e evitar repetições.
+- Você implementou validações básicas nos payloads para criação e atualização de agentes e casos, incluindo retorno dos status HTTP corretos para erros 400 e 404.
+- A modularização entre `controllers`, `repositories` e `routes` está correta, o que facilita a manutenção.
+- Você já tentou implementar filtros e buscas nos casos, o que é um ótimo passo para ir além do básico. Isso mostra iniciativa! 💪
+  
+---
 
-Um ponto fundamental que está impactando várias funcionalidades é o formato dos IDs que você está usando para agentes e casos.
+## Pontos que precisam de atenção para destravar seu projeto 🔍
 
-- No seu código, por exemplo no `agentesController.js`, você faz:
+### 1. IDs de agentes e casos **não são UUIDs**, mas o teste espera que sejam!
+
+> 🚩 **Por que isso é importante?**  
+> A API está esperando que os IDs dos agentes e casos sejam UUIDs (identificadores universais únicos), que são strings no formato específico, e não números inteiros ou outro tipo. Isso afeta diretamente a validação, buscas e atualizações por ID, além de ser um requisito do projeto que garante unicidade e segurança.
+
+No seu código, por exemplo, no `agentesController.js` você faz:
 
 ```js
 const id = parseInt(req.params.id);
+const agente = await agentesRepository.getAgenteById(id);
 ```
 
-e no `agentesRepository.js`:
+E no `agentesRepository.js`:
 
 ```js
 const getAgenteById = async (id) => {
@@ -42,108 +44,23 @@ const getAgenteById = async (id) => {
 };
 ```
 
-Isso indica que você está tratando o ID como um número inteiro. Porém, na descrição do desafio e nos testes, o ID esperado para agentes e casos é um **UUID** (um identificador único universal, que é uma string no formato `"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"`).
+Aqui você está tratando o ID como número inteiro, usando `parseInt`. Porém, o projeto espera que o ID seja uma string UUID, como `'550e8400-e29b-41d4-a716-446655440000'`. Isso explica porque os testes de busca, atualização e deleção por ID falham.
 
-No `casosController.js`, você até importa a função para validar UUID:
+👉 **O que fazer?**  
+- Remova o `parseInt` e trabalhe com o ID como string.  
+- Utilize a função `validate` do pacote `uuid` para validar os IDs, como você fez no controller de casos, mas também para agentes.  
+- Ajuste seu banco de dados e migrations para que os IDs sejam armazenados como UUIDs (tipo `uuid` no PostgreSQL) e gerados automaticamente (com `gen_random_uuid()` ou similar).  
 
-```js
-const { validate: isUuid } = require('uuid');
-```
+Essa mudança é fundamental e vai destravar várias funcionalidades!  
 
-e usa essa validação, mas no repositório e no controller de agentes você não faz isso. Essa inconsistência gera erros de validação e falhas em buscas, atualizações e deleções.
-
-**Por que isso é importante?**  
-Se o ID do agente ou caso não é um UUID, seu banco e seu código não vão conseguir encontrar os registros corretamente, e isso gera erros 404 e falhas em operações que dependem desse ID.
-
-**Como corrigir?**  
-- Use UUIDs como IDs para agentes e casos em todo o projeto.
-- No controller de agentes, não faça `parseInt` no ID, apenas use a string do `req.params.id`.
-- Valide o UUID usando a função `isUuid` antes de buscar ou manipular dados.
-- Ajuste seus repositórios para buscar pelo ID como string.
-
-Exemplo corrigido no `agentesController.js`:
-
-```js
-const { validate: isUuid } = require('uuid');
-
-async function getAgenteById(req, res) {
-  try {
-    const id = req.params.id;
-    if (!isUuid(id)) {
-      return res.status(400).json({ error: 'ID inválido. Deve ser um UUID.' });
-    }
-    const agente = await agentesRepository.getAgenteById(id);
-
-    if (!agente) {
-      return res.status(404).json({ error: 'Agente não encontrado' });
-    }
-
-    res.status(200).json(agente);
-  } catch (error) {
-    errorHandler(res, error);
-  }
-}
-```
-
-Isso vai garantir que a validação do ID esteja alinhada com o esperado e evitará erros de busca.
+🔗 Recomendo muito que você assista a este vídeo para entender melhor a manipulação de UUIDs e validação em APIs:  
+[Validação de dados em APIs Node.js/Express](https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_)
 
 ---
 
-### 2. Falta de async/await no controller de casos
+### 2. Endpoints de `/casos` estão registrados com prefixo duplicado no arquivo `casosRoutes.js`
 
-No seu `casosController.js`, funções como `getAllCasos`, `getCasoById`, `createCaso` e outras estão usando os métodos do repositório que retornam promessas, porém você não está usando `async` e `await` para esperar esses resultados.
-
-Por exemplo:
-
-```js
-function getAllCasos(req, res) {
-    let casos = casosRepository.findAll();
-    // ...
-    res.status(200).json(casos);
-}
-```
-
-Aqui, `casosRepository.findAll()` é uma função assíncrona (deve ser, pois acessa o banco), mas você não espera o resultado, o que faz com que `casos` seja uma Promise e não os dados reais.
-
-**Por que isso é um problema?**  
-O Express vai tentar enviar a Promise como resposta, causando erros ou respostas inesperadas.
-
-**Como corrigir?**  
-Transforme essas funções em `async` e use `await` para obter os dados:
-
-```js
-async function getAllCasos(req, res) {
-    try {
-      let casos = await casosRepository.getAllCasos();
-      const { agente_id, status, q } = req.query;
-
-      if (agente_id) {
-          casos = casos.filter(caso => caso.agente_id === agente_id);
-      }
-      if (status) {
-          casos = casos.filter(caso => caso.status && caso.status.toLowerCase() === status.toLowerCase());
-      }
-      if (q) {
-          casos = casos.filter(caso =>
-              (caso.titulo && caso.titulo.toLowerCase().includes(q.toLowerCase())) ||
-              (caso.descricao && caso.descricao.toLowerCase().includes(q.toLowerCase()))
-          );
-      }
-
-      res.status(200).json(casos);
-    } catch (error) {
-      errorHandler(res, error);
-    }
-}
-```
-
-Faça o mesmo para as outras funções do `casosController.js`.
-
----
-
-### 3. Inconsistências nos nomes das funções e endpoints em `casosRoutes.js`
-
-No arquivo `routes/casosRoutes.js`, você declarou as rotas assim:
+No seu arquivo `routes/casosRoutes.js` você tem:
 
 ```js
 router.get('/casos', casosController.getAllCasos);
@@ -155,19 +72,16 @@ router.delete('/casos/:id', casosController.deleteCaso);
 router.get('/casos/:caso_id/agente', casosController.getAgenteByCasoId);
 ```
 
-Mas no `server.js`, você já está usando o prefixo `/casos` para esse router:
+Mas no `server.js` você já está usando:
 
 ```js
 app.use('/casos', casosRoutes);
 ```
 
-Isso significa que, na prática, sua rota para listar casos está em `/casos/casos` — o que não é o esperado.
+Isso faz com que o caminho final fique `/casos/casos`, `/casos/casos/:id`, etc., o que não é o esperado.
 
-**Por que isso é um problema?**  
-As rotas acabam ficando duplicadas, e as chamadas para `/casos` não vão funcionar, porque o caminho real está em `/casos/casos`.
-
-**Como corrigir?**  
-No arquivo `casosRoutes.js`, remova o `/casos` do início de cada rota, deixando apenas o caminho relativo:
+👉 **O que fazer?**  
+- Ajuste as rotas no arquivo `casosRoutes.js` para que os caminhos não incluam o `/casos` prefixado, apenas a parte relativa:  
 
 ```js
 router.get('/', casosController.getAllCasos);
@@ -179,81 +93,62 @@ router.delete('/:id', casosController.deleteCaso);
 router.get('/:caso_id/agente', casosController.getAgenteByCasoId);
 ```
 
-Assim, com o prefixo `/casos` no `server.js`, as rotas ficarão corretas, como `/casos`, `/casos/:id`, etc.
+Assim, o caminho completo será `/casos/` e `/casos/:id`, como esperado.
+
+Esse erro faz com que suas requisições para casos não encontrem os endpoints corretos, causando falhas em várias operações.
+
+🔗 Para entender melhor como funciona o roteamento com `express.Router()`, recomendo este material:  
+[Documentação oficial do Express.js sobre roteamento](https://expressjs.com/pt-br/guide/routing.html)
 
 ---
 
-### 4. Métodos PATCH para agentes não implementados
+### 3. No `casosController.js`, você está usando métodos síncronos para acessar o repositório, que é assíncrono
 
-Vi que no arquivo `routes/agentesRoutes.js` você não tem uma rota para o método PATCH, só GET, POST, PUT e DELETE:
-
-```js
-router.get('/', agentesController.getAllAgentes);
-router.get('/:id', agentesController.getAgenteById);
-router.post('/', agentesController.createAgente);
-router.put('/:id', agentesController.updateAgente);
-router.delete('/:id', agentesController.deleteAgente);
-router.get('/:id/casos', agentesController.getCasosByAgenteId); // Bônus
-```
-
-Porém, um dos testes espera que você tenha o PATCH para atualização parcial do agente, e que ele trate erros de payload incorreto, retornando 400.
-
-**Por que isso é importante?**  
-O método PATCH é um dos requisitos básicos para atualização parcial, e sua ausência faz com que várias operações falhem.
-
-**Como corrigir?**  
-- Implemente a rota PATCH para agentes:
+Você tem, por exemplo:
 
 ```js
-router.patch('/:id', agentesController.patchAgente);
-```
-
-- Crie a função `patchAgente` no `agentesController.js`, com validações semelhantes às do `patchCaso`.
-
-Exemplo básico:
-
-```js
-async function patchAgente(req, res) {
-  try {
-    const id = req.params.id;
-    const updates = req.body;
-
-    if (updates.id && updates.id !== id) {
-      return res.status(400).json({ error: 'Não é permitido alterar o ID do agente.' });
-    }
-
-    // Aqui você pode adicionar validações específicas para os campos que podem ser atualizados
-
-    const updatedAgente = await agentesRepository.updateAgente(id, updates);
-
-    if (!updatedAgente) {
-      return res.status(404).json({ error: 'Agente não encontrado.' });
-    }
-
-    res.status(200).json(updatedAgente);
-  } catch (error) {
-    errorHandler(res, error);
-  }
+function getAllCasos(req, res) {
+    let casos = casosRepository.findAll();
+    // ...
+    res.status(200).json(casos);
 }
 ```
 
-Isso vai garantir que seu endpoint PATCH para agentes esteja funcionando e cumpra os requisitos.
+Mas no seu `casosRepository.js`, todos os métodos usam async/await e retornam Promises:
+
+```js
+const getAllCasos = async () => {
+  return await db('casos').select('*');
+};
+```
+
+Ou seja, `findAll()` não existe e você deveria usar `getAllCasos()` com `await`.
+
+👉 **O que fazer?**
+
+- Ajuste o controller para ser `async` e use `await` para chamar o repositório, assim:
+
+```js
+async function getAllCasos(req, res) {
+    try {
+        let casos = await casosRepository.getAllCasos();
+        // ... filtros aqui
+        res.status(200).json(casos);
+    } catch (error) {
+        // tratamento de erro
+    }
+}
+```
+
+- Faça isso para todos os métodos do controller que acessam o banco.
+
+Esse erro impede que os dados sejam carregados corretamente, causando falha na listagem, criação e atualização de casos.
 
 ---
 
-### 5. Uso correto dos repositórios no controller de casos
+### 4. No `casosRepository.js`, os nomes dos métodos não batem com os usados no controller
 
-No seu `casosController.js`, você está usando funções do repositório que não existem, como:
-
-```js
-let casos = casosRepository.findAll();
-const caso = casosRepository.findById(id);
-const novoCaso = casosRepository.create({ ... });
-const casoAtualizado = casosRepository.update(id, dados);
-const deletado = casosRepository.remove(id);
-```
-
-Porém, no seu `casosRepository.js`, os métodos são nomeados assim:
+Você definiu:
 
 ```js
 const getAllCasos = async () => { ... };
@@ -263,122 +158,88 @@ const updateCaso = async (id, caso) => { ... };
 const deleteCaso = async (id) => { ... };
 ```
 
-Ou seja, os nomes não batem (`findAll` vs `getAllCasos`, `findById` vs `getCasoById`, etc).
+Mas no controller você chama métodos como `findAll()`, `findById()`, `create()`, `update()`, `remove()`, que não existem.
 
-**Por que isso é um problema?**  
-Chamadas para métodos inexistentes geram erros e fazem com que os endpoints não funcionem.
+👉 **O que fazer?**
 
-**Como corrigir?**  
-Alinhe os nomes das funções no controller com os nomes exportados no repositório.
-
-Exemplo:
+- Padronize os nomes dos métodos entre controller e repository para evitar confusão.  
+- Por exemplo, no controller, importe e use exatamente os mesmos nomes exportados no repository:
 
 ```js
+const casosRepository = require('../repositories/casosRepository');
+
 async function getAllCasos(req, res) {
-  try {
-    let casos = await casosRepository.getAllCasos();
+    const casos = await casosRepository.getAllCasos();
     // ...
-  } catch (error) {
-    errorHandler(res, error);
-  }
 }
 ```
 
-Faça o mesmo para os outros métodos (`getCasoById`, `createCaso`, `updateCaso`, `deleteCaso`).
+- Alinhe isso para todos os métodos.
 
 ---
 
-### 6. Validação e tratamento de erros customizados para agentes e casos
+### 5. No `agentesController.js`, você está usando `parseInt` para ID, mas o projeto espera UUID
 
-Notei que você já implementou validações básicas e retornos 400 e 404, mas os testes bônus que envolvem mensagens de erro customizadas para argumentos inválidos não passaram.
-
-Isso pode estar relacionado à forma como você está estruturando as mensagens de erro no JSON, ou à ausência de validações mais específicas para filtros e query params.
-
-**Dica:**  
-- Para filtros e query params, valide os parâmetros antes de executar a consulta.
-- Retorne mensagens claras no formato:
-
-```json
-{
-  "status": 400,
-  "message": "Parâmetros inválidos",
-  "errors": {
-    "campo": "descrição do erro"
-  }
-}
-```
-
-- Use um middleware ou função utilitária para centralizar esse tratamento.
+Como no item 1, você precisa tratar os IDs de agentes como strings UUID, não números. Isso vale para todos os métodos que recebem `req.params.id`.
 
 ---
 
-### 7. Atenção à Estrutura de Diretórios
+### 6. Falta de validação de UUID para agentes
 
-Sua estrutura de arquivos está correta e segue o padrão esperado, o que é ótimo! 👏
+Você usa a função `validate` do pacote `uuid` para validar IDs de casos no `casosController.js`, mas não faz isso para agentes. Isso pode causar problemas de validação e inconsistências ao buscar ou atualizar agentes.
 
-```
-.
-├── controllers/
-├── repositories/
-├── routes/
-├── db/
-├── docs/
-├── utils/
-├── server.js
-├── package.json
-```
-
-Manter essa organização é fundamental para projetos maiores e para facilitar a colaboração.
+👉 **O que fazer?**  
+- Importe e use a função `validate` para validar IDs de agentes em todos os controllers que recebem `id` como parâmetro.
 
 ---
 
-## Recursos para te ajudar a corrigir e evoluir 🚀📚
+### 7. Organização do projeto está boa, mas atenção ao uso de banco de dados e armazenamento em memória
 
-- **UUID e validação de IDs:**  
-  [Documentação do UUID no npm](https://www.npmjs.com/package/uuid)  
-  [Validação de UUID com uuid.validate](https://expressjs.com/en/api.html#req.params) (Express docs sobre params)
+No enunciado, o desafio pedia para armazenar os dados **em memória**, usando arrays no layer de repositories, mas seu código usa banco de dados com Knex e PostgreSQL.
 
-- **Express.js e arquitetura MVC:**  
-  [Express.js Routing (oficial)](https://expressjs.com/pt-br/guide/routing.html)  
-  [Vídeo sobre arquitetura MVC com Node.js](https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH)
+Isso não é errado, mas pode ter causado incompatibilidade com os testes automáticos, que esperam manipulação em memória.
 
-- **Async/Await em Controllers:**  
-  [Como usar async/await no Express](https://youtu.be/RSZHvQomeKE)
-
-- **Validação e tratamento de erros HTTP:**  
-  [Status 400 Bad Request - MDN](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400)  
-  [Status 404 Not Found - MDN](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404)  
-  [Validação de dados em Node.js/Express](https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_)
-
-- **Manipulação de Arrays no JavaScript:**  
-  [Métodos de array no JS](https://youtu.be/glSgUKA5LjE?si=t9G2NsC8InYAU9cI)
+👉 **O que fazer?**  
+- Verifique se o requisito do desafio pede armazenamento em memória ou com banco.  
+- Se for em memória, ajuste seus repositories para usar arrays e métodos síncronos.  
+- Se for com banco, informe no README e adapte os testes.
 
 ---
 
-## Resumo rápido para você focar e melhorar 💡✅
+## Resumo dos pontos principais para focar agora 📋
 
-- **Use UUIDs para IDs de agentes e casos, não números inteiros.**  
-  Valide os IDs com `uuid.validate` e não faça `parseInt` nos IDs.
+- [ ] Corrigir o tipo de ID para UUID em agentes e casos, removendo `parseInt` e validando com `uuid.validate()`.
+- [ ] Ajustar as rotas em `casosRoutes.js` para não duplicar o prefixo `/casos`.
+- [ ] Tornar os controllers de casos assíncronos (`async/await`) e usar os métodos corretos do repository (`getAllCasos`, `getCasoById`, etc).
+- [ ] Padronizar os nomes dos métodos entre controllers e repositories para evitar confusão.
+- [ ] Implementar validação de UUID para IDs de agentes, assim como fez para casos.
+- [ ] Revisar se o armazenamento de dados está conforme o esperado (em memória ou banco de dados).
+  
+---
 
-- **Ajuste os nomes das funções no `casosController.js` para usar os métodos corretos do repositório.**
+## Para continuar evoluindo 🚀
 
-- **Transforme as funções do controller de casos em `async` e use `await` para chamadas assíncronas.**
+Você está no caminho certo! Com essas correções, seu projeto vai ganhar muito em robustez e alinhamento com as boas práticas de API RESTful. Continue explorando os conceitos de UUID, async/await e arquitetura MVC para Node.js com Express!
 
-- **Corrija as rotas em `casosRoutes.js` para não duplicar o prefixo `/casos`.**
+Aqui estão alguns recursos que vão te ajudar a entender e corrigir os pontos acima:
 
-- **Implemente o método PATCH para agentes, com validações e tratamento de erros.**
-
-- **Melhore as mensagens de erro customizadas para filtros e validações, seguindo o formato JSON esperado.**
-
-- **Continue mantendo a estrutura do projeto organizada como está!**
+- **Validação e uso de UUIDs em APIs:**  
+  https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_  
+- **Roteamento com Express.js:**  
+  https://expressjs.com/pt-br/guide/routing.html  
+- **Async/Await e Promises no Node.js:**  
+  https://youtu.be/RSZHvQomeKE?si=PSkGqpWSRY90Ded5  
+- **Boas práticas em APIs RESTful e status HTTP:**  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404  
 
 ---
 
-diegovitorportella, você já está no caminho certo e com uma base muito boa! 🚀✨ Corrigindo esses pontos, sua API vai ficar muito mais sólida e alinhada com o que o desafio pede. Continue focado, pois a prática leva à perfeição! 💪😊
+Espero que esse feedback te ajude a entender melhor onde estão os pontos de melhoria e como avançar. Estou aqui torcendo pelo seu sucesso! Qualquer dúvida, só chamar! 🤝💙
 
-Se precisar de ajuda para entender algum desses pontos, não hesite em perguntar. Estou aqui para te ajudar a crescer como dev! 🚀👨‍💻👩‍💻
+Continue firme, você está fazendo um ótimo trabalho! 🚓👊
 
-Um abraço e bons códigos! 🤗👾
+Abraços do seu Code Buddy! 🤖✨
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 
