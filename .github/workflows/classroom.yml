@@ -22,6 +22,10 @@ jobs:
 
       - name: Check repository criteria
         uses: webtech-network/autograder@web-01-2
+        # --- ADICIONE ESTAS DUAS LINHAS AQUI ---
+        env:
+          NODE_ENV: ci
+        # ------------------------------------
         with: 
           redis_name: ${{ secrets.REDIS_NAME }}
           redis_url: ${{ secrets.REDIS_URL }}
