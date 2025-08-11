@@ -1,58 +1,34 @@
-const { v4: uuidv4 } = require('uuid');
+const db = require('../db/db');
 
-// Simula um banco de dados em memória para os casos, com um exemplo
-let casos = [
-    {
-        id: "f5fb2ad5-22a8-4cb4-90f2-8733517a0d46",
-        titulo: "homicidio",
-        descricao: "Disparos foram reportados às 22:33 do dia 10/07/2007 na região do bairro União, resultando na morte da vítima, um homem de 45 anos.",
-        status: "aberto",
-        agente_id: "401bccf5-cf9e-489d-8412-446cd169a0f1"
-    }
-];
+const getAllCasos = async () => {
+  return await db('casos').select('*');
+};
 
-// Função para listar todos os casos
-function findAll() {
-    return casos;
-}
+const getCasoById = async (id) => {
+  return await db('casos').where({ id }).first();
+};
 
-// Função para encontrar um caso pelo ID
-function findById(id) {
-    return casos.find(caso => caso.id === id);
-}
+const createCaso = async (caso) => {
+  const [newCaso] = await db('casos').insert(caso).returning('*');
+  return newCaso;
+};
 
-// Função para criar um novo caso
-function create(caso) {
-    const novoCaso = { id: uuidv4(), ...caso };
-    casos.push(novoCaso);
-    return novoCaso;
-}
+const updateCaso = async (id, caso) => {
+  const [updatedCaso] = await db('casos')
+    .where({ id })
+    .update(caso)
+    .returning('*');
+  return updatedCaso;
+};
 
-// Função para atualizar um caso
-function update(id, caso) {
-    const index = casos.findIndex(c => c.id === id);
-    if (index !== -1) {
-        casos[index] = { ...casos[index], ...caso };
-        return casos[index];
-    }
-    return null;
-}
+const deleteCaso = async (id) => {
+  return await db('casos').where({ id }).del();
+};
 
-// Função para remover um caso
-function remove(id) {
-    const index = casos.findIndex(c => c.id === id);
-    if (index !== -1) {
-        casos.splice(index, 1);
-        return true;
-    }
-    return false;
-}
-
-// Exporta as funções
 module.exports = {
-    findAll,
-    findById,
-    create,
-    update,
-    remove
+  getAllCasos,
+  getCasoById,
+  createCaso,
+  updateCaso,
+  deleteCaso,
 };

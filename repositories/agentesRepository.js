@@ -1,60 +1,39 @@
-const { v4: uuidv4 } = require('uuid');
+const db = require('../db/db');
 
-// Simula um banco de dados em memória, começando com um agente de exemplo
-let agentes = [
-    {
-        id: "401bccf5-cf9e-489d-8412-446cd169a0f1",
-        nome: "Rommel Carneiro",
-        dataDeIncorporacao: "1992-10-04",
-        cargo: "delegado"
-    }
-];
+const getAllAgentes = async () => {
+  return await db('agentes').select('*');
+};
 
-// Função para listar todos os agentes
-function findAll() {
-    return agentes;
-}
+const getAgenteById = async (id) => {
+  return await db('agentes').where({ id }).first();
+};
 
-// Função para encontrar um agente pelo ID
-function findById(id) {
-    return agentes.find(agente => agente.id === id);
-}
+const createAgente = async (agente) => {
+  const [newAgente] = await db('agentes').insert(agente).returning('*');
+  return newAgente;
+};
 
-// Função para criar um novo agente
-function create(agente) {
-    // Gera um novo ID único e adiciona o agente ao array
-    const novoAgente = { id: uuidv4(), ...agente };
-    agentes.push(novoAgente);
-    return novoAgente;
-}
+const updateAgente = async (id, agente) => {
+  const [updatedAgente] = await db('agentes')
+    .where({ id })
+    .update(agente)
+    .returning('*');
+  return updatedAgente;
+};
 
-// Função para atualizar um agente (usada tanto para PUT quanto para PATCH)
-function update(id, agente) {
-    const index = agentes.findIndex(a => a.id === id);
-    if (index !== -1) {
-        // Atualiza o objeto no array
-        agentes[index] = { ...agentes[index], ...agente };
-        return agentes[index];
-    }
-    return null; // Retorna null se não encontrar
-}
+const deleteAgente = async (id) => {
+  return await db('agentes').where({ id }).del();
+};
 
-// Função para remover um agente
-function remove(id) {
-    const index = agentes.findIndex(a => a.id === id);
-    if (index !== -1) {
-        // Remove o agente do array
-        agentes.splice(index, 1);
-        return true; // Retorna true se foi bem-sucedido
-    }
-    return false; // Retorna false se não encontrar
-}
+const getCasosByAgenteId = async (id) => {
+  return await db('casos').where({ agente_id: id });
+};
 
-// Exporta as funções para que possam ser usadas em outros arquivos (nos controllers)
 module.exports = {
-    findAll,
-    findById,
-    create,
-    update,
-    remove
+  getAllAgentes,
+  getAgenteById,
+  createAgente,
+  updateAgente,
+  deleteAgente,
+  getCasosByAgenteId,
 };
