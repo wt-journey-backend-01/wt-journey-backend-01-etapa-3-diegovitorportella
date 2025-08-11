@@ -1,73 +1,94 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 6 créditos restantes para usar o sistema de feedback AI.
+Você tem 5 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para diegovitorportella:
 
-Nota final: **27.5/100**
+Nota final: **13.1/100**
 
-# Feedback para o DiegoVitorPortella 🚔✨
+# Feedback para o(a) Diego Vitor Portella 🚓🚀
 
-Olá, Diego! Primeiro, parabéns pelo esforço e pela estruturação do seu projeto! 👏 Você já organizou seu código em pastas bem definidas (`controllers`, `repositories`, `routes`, etc.), usou middlewares importantes como `express.json()`, e até integrou o Swagger para documentação da API — isso mostra que você está no caminho certo para construir uma API robusta e profissional. 🎉
-
-Também notei que você implementou várias validações e tratamentos de erro, o que é essencial para uma API confiável. Além disso, você conseguiu implementar algumas funcionalidades bônus, como o filtro por status e busca por keywords nos casos, e a rota que retorna o agente responsável por um caso. Isso é muito legal! 👏👏
+Olá, Diego! Que legal ver seu empenho construindo uma API para o Departamento de Polícia! 👏 Antes de mais nada, parabéns por organizar seu projeto com pastas separadas para rotas, controladores e repositórios — isso mostra que você já tem uma boa noção da arquitetura modular e está no caminho certo! 🎉 Também notei que você já implementou várias operações CRUD para agentes e casos, e até tentou os bônus, como filtros e relacionamentos entre agentes e casos. Isso é muito positivo! 💪
 
 ---
 
-## Vamos analisar juntos os pontos que precisam de atenção para destravar seu projeto e melhorar sua nota? 🕵️‍♂️🔍
+## Vamos destrinchar juntos o que está funcionando e o que precisa de atenção para seu projeto ficar tinindo! 🔍
 
 ---
 
-### 1. **Arquitetura e Organização do Projeto**
+## 1. Estrutura do Projeto: Tá Quase Lá! 📂
 
-Sua estrutura de pastas está correta e segue o padrão esperado:
+Sua estrutura está bem próxima do esperado e isso é ótimo! Você tem:
 
-```
-.
-├── controllers/
-├── repositories/
-├── routes/
-├── docs/
-├── utils/
-├── server.js
-├── package.json
-```
+- `server.js`
+- Pastas `routes/`, `controllers/`, `repositories/`, `docs/` e `utils/`
 
-Ótimo! Isso facilita muito a manutenção e escalabilidade do código. Continue assim! 👍
+Isso é exatamente o que o desafio pede e facilita muito a manutenção e a escalabilidade do seu código. 👍
+
+**Pequeno detalhe que pode melhorar:**  
+Você está usando um banco de dados PostgreSQL com Knex.js para persistência, mas o desafio pedia que os dados fossem armazenados **em memória usando arrays** na camada de `repositories`. Isso significa que, para este desafio específico, você deveria implementar a persistência temporária sem banco, apenas manipulando arrays JavaScript dentro dos repositórios.
+
+Por que isso importa?  
+Porque o uso do banco de dados muda a forma como você manipula os dados, e a avaliação espera que você domine a manipulação direta em memória antes de avançar para banco. Além disso, essa diferença impacta diretamente no funcionamento dos endpoints e na resposta dos testes.
 
 ---
 
-### 2. **Endpoints `/agentes` e `/casos`**
+## 2. IDs: UUID x Inteiros — Atenção Aqui! 🆔⚠️
 
-Você criou as rotas para ambos os recursos, e os controllers estão implementados. Isso é fundamental! No entanto, percebi que os métodos HTTP para os casos (`/casos`) estão com um problema fundamental que está impedindo o funcionamento correto:
+Vi que você está usando IDs numéricos (`parseInt(req.params.id)`), mas o desafio exige que os IDs sejam do tipo **UUID** (identificadores únicos universais). Essa é uma diferença fundamental!
 
-Na sua `routes/casosRoutes.js`, todas as rotas estão definidas assim:
+Por exemplo, no seu `agentesController.js`:
 
 ```js
-router.get('/casos', casosController.getAllCasos);
-router.post('/casos', casosController.createCaso);
-router.get('/casos/:id', casosController.getCasoById);
-router.put('/casos/:id', casosController.updateCaso);
-router.patch('/casos/:id', casosController.patchCaso);
-router.delete('/casos/:id', casosController.deleteCaso);
-router.get('/casos/:caso_id/agente', casosController.getAgenteByCasoId);
+const id = parseInt(req.params.id);
 ```
 
-**Aqui está o problema raiz:** você está prefixando as rotas com `/casos` dentro do arquivo de rotas, mas no `server.js` você já registrou essas rotas com o prefixo `/casos`:
+E no `casosController.js`:
 
 ```js
-app.use('/casos', casosRoutes);
+const id = parseInt(req.params.id);
 ```
 
-Ou seja, a rota completa para listar casos está sendo exposta como `/casos/casos` em vez de `/casos`.
+**Problema:**  
+Ao converter o ID para inteiro, você perde o formato UUID, que é uma string complexa (ex: `"550e8400-e29b-41d4-a716-446655440000"`). Isso faz com que suas buscas e atualizações não encontrem os registros, porque o banco (ou seu array, se fosse em memória) espera o UUID completo como string.
 
-Essa duplicação de prefixo faz com que as rotas não sejam encontradas corretamente, e isso impacta diretamente os testes e o funcionamento da API.
+**Como corrigir:**  
+- Não converta o `req.params.id` para inteiro. Use ele como string diretamente.
+- Garanta que, ao criar novos agentes e casos, você gere UUIDs para os IDs (pode usar o pacote `uuid` que já está nas suas dependências).
+- Valide se o ID recebido na URL tem formato válido de UUID para evitar erros.
+
+Exemplo simples para obter o ID:
+
+```js
+const id = req.params.id; // manter como string, UUID
+```
+
+E para gerar UUID ao criar:
+
+```js
+const { v4: uuidv4 } = require('uuid');
+
+const newAgente = {
+  id: uuidv4(),
+  nome,
+  dataDeIncorporacao,
+  cargo,
+};
+```
+
+Isso vai destravar vários endpoints que hoje retornam 404 porque não encontram os IDs.
+
+**Recomendo muito este recurso para entender UUIDs e validação de IDs:**  
+- [Validação de IDs e tratamento de erros 404](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404)  
+- [Como gerar e usar UUIDs no Node.js](https://youtu.be/RSZHvQomeKE) (vídeo introdutório que também fala sobre middlewares e manipulação de requisições)
 
 ---
 
-### Como corrigir? 🤔
+## 3. Endpoints CRUD para Agentes e Casos: Implementados, mas com detalhes 🛠️
 
-No arquivo `routes/casosRoutes.js`, remova o prefixo `/casos` das rotas, deixando apenas o caminho relativo:
+Você criou os endpoints para `/agentes` e `/casos` com os métodos HTTP esperados (GET, POST, PUT, PATCH, DELETE). Isso é ótimo!
+
+Por exemplo, em `routes/casosRoutes.js`:
 
 ```js
 router.get('/', casosController.getAllCasos);
@@ -76,193 +97,175 @@ router.get('/:id', casosController.getCasoById);
 router.put('/:id', casosController.updateCaso);
 router.patch('/:id', casosController.patchCaso);
 router.delete('/:id', casosController.deleteCaso);
-router.get('/:caso_id/agente', casosController.getAgenteByCasoId);
+router.get('/:caso_id/agente', casosController.getAgenteByCasoId); // Bônus
 ```
 
-Assim, com o prefixo `/casos` já definido no `server.js`, a rota final será `/casos` para listar, `/casos/:id` para buscar, etc.
+E em `controllers/casosController.js` você tem funções bem estruturadas para cada operação.
 
----
+**Porém, alguns pontos importantes para melhorar:**
 
-### 3. **Validação dos IDs (UUID vs Inteiro)**
+- **Validação dos dados no PUT e PATCH:**  
+  No seu `updateCaso` (PUT) você aceita `const dados = req.body;` sem validar se os campos obrigatórios estão presentes e corretos. Isso pode causar problemas se o payload estiver incompleto ou inválido.
 
-Percebi que você está usando IDs numéricos inteiros para agentes, por exemplo:
+- **No PATCH (update parcial), você valida o campo `status` corretamente, mas seria bom validar outros campos também, ou pelo menos garantir que o payload não está vazio.**
 
-```js
-const id = parseInt(req.params.id);
-```
+- **No `createCaso`, você valida os campos e o status, o que é ótimo!**
 
-Mas na especificação do projeto, os IDs devem ser UUIDs (strings no formato UUID). Isso gera um problema de validação, pois os testes esperam UUIDs, e seu código não trata isso.
+- **No `agentesController.js`, você não implementou o método PATCH para atualização parcial do agente.**  
+  Isso explica porque o teste de PATCH para agentes falha. Você só tem PUT, mas o desafio pede ambos.
 
-Além disso, no seu `controllers/casosController.js`, você usa a função `isUuid` para validar o ID dos casos, mas nos agentes você não faz essa validação.
-
----
-
-### Impacto disso:
-
-- Quando você tenta buscar um agente pelo ID, seu código espera um número, mas o sistema espera um UUID. Isso causa falhas de validação e erros 404 inesperados.
-- Os testes e a API esperam que você valide se o ID passado é um UUID válido para agentes e casos.
-- Isso também explica a penalidade detectada de "Validation: ID utilizado para agentes não é UUID" e "Validation: ID utilizado para casos não é UUID".
-
----
-
-### Como corrigir? 🔧
-
-- Pare de converter o ID para número com `parseInt`.
-- Use a mesma validação de UUID que você usou para casos, também para agentes.
-- Exemplo para `getAgenteById`:
+**Sugestão para PATCH de agente (exemplo):**
 
 ```js
-const { validate: isUuid } = require('uuid');
-
-async function getAgenteById(req, res) {
+async function patchAgente(req, res) {
   try {
     const id = req.params.id;
-    if (!isUuid(id)) {
-      return res.status(400).json({ error: 'ID do agente inválido. Deve ser um UUID.' });
+    const dados = req.body;
+
+    // Validação simples para garantir que pelo menos um campo foi enviado
+    if (!dados.nome && !dados.dataDeIncorporacao && !dados.cargo) {
+      return res.status(400).json({ error: 'Pelo menos um campo deve ser informado para atualização parcial.' });
     }
-    const agente = await agentesRepository.getAgenteById(id);
-    if (!agente) {
-      return res.status(404).json({ error: 'Agente não encontrado' });
+
+    const agenteAtualizado = await agentesRepository.updateAgente(id, dados);
+
+    if (!agenteAtualizado) {
+      return res.status(404).json({ error: 'Agente não encontrado.' });
     }
-    res.status(200).json(agente);
+
+    res.status(200).json(agenteAtualizado);
   } catch (error) {
     errorHandler(res, error);
   }
 }
 ```
 
-Faça o mesmo para outras funções que recebem `id` de agentes ou casos.
-
----
-
-### 4. **Repositorios e Consistência dos Métodos**
-
-No seu `agentesRepository.js` e `casosRepository.js`, você tem métodos como `getAgenteById` e `getCasoById`, mas no controller `casosController.js` você chama `casosRepository.findById` e `agentesRepository.findById` que não existem.
-
-Exemplo:
+E não esqueça de adicionar a rota correspondente em `routes/agentesRoutes.js`:
 
 ```js
-const caso = casosRepository.findById(id);
-const agente = agentesRepository.findById(caso.agente_id);
+router.patch('/:id', agentesController.patchAgente);
 ```
 
-Mas no repositório, o método se chama `getCasoById` e `getAgenteById`.
-
 ---
 
-### Impacto:
+## 4. Validação e Tratamento de Erros: Você está no caminho, mas pode melhorar! 🚦
 
-Isso gera erros de execução porque esses métodos não existem, e consequentemente as rotas não funcionam.
+Você já tem um `errorHandler` para centralizar erros, o que é ótimo! Também implementou respostas com status 400 e 404 em vários pontos.
 
----
+Porém, algumas mensagens de erro poderiam ser mais claras e padronizadas. Além disso, a validação dos IDs UUID ainda não está presente, o que pode gerar erros inesperados.
 
-### Como corrigir? 🔧
+**Dica:** Sempre valide o formato dos UUIDs antes de consultar o repositório, para evitar buscas inúteis e responder com erro 400 logo de cara.
 
-Troque as chamadas para os métodos corretos:
+Exemplo simples de validação de UUID:
 
 ```js
-const caso = await casosRepository.getCasoById(id);
-const agente = await agentesRepository.getAgenteById(caso.agente_id);
-```
+const { validate: isUuid } = require('uuid');
 
-Lembre-se de usar `await` pois seus métodos são assíncronos.
-
----
-
-### 5. **Uso de Funções Assíncronas no Controller de Casos**
-
-No seu `casosController.js`, as funções não estão marcadas como `async` e você não está usando `await` ao chamar os métodos do repositório que são assíncronos (pois usam banco de dados).
-
-Exemplo:
-
-```js
-function getAllCasos(req, res) {
-    let casos = casosRepository.findAll();
-    // ...
+if (!isUuid(id)) {
+  return res.status(400).json({ error: 'ID inválido. Deve ser um UUID.' });
 }
 ```
 
-Mas `casosRepository.findAll()` não existe e deveria ser `getAllCasos()` e ser chamada com `await`.
+Assim, você ajuda o cliente da API a entender o que está errado e evita consultas desnecessárias.
 
 ---
 
-### Como corrigir? 🔧
+## 5. Filtros e Bônus: Tentou e quase acertou! 🌟
 
-Declare as funções como `async` e use `await` para chamadas ao banco:
+Você tentou implementar filtros para os casos e agentes, e até trouxe ordenação por data de incorporação, o que é super bacana! Porém, notei que:
+
+- Na rota `/agentes`, o filtro por cargo e ordenação são feitos no repositório, mas o controlador `getAllAgentes` não está passando os filtros recebidos via query params para o repositório.
+
+No seu `agentesController.js`, o método `getAllAgentes` está assim:
 
 ```js
-async function getAllCasos(req, res) {
-    try {
-        let casos = await casosRepository.getAllCasos();
-        // ... filtros
-        res.status(200).json(casos);
-    } catch (error) {
-        errorHandler(res, error);
-    }
+async function getAllAgentes(req, res) {
+  try {
+    const agentes = await agentesRepository.getAllAgentes();
+    res.status(200).json(agentes);
+  } catch (error) {
+    errorHandler(res, error);
+  }
 }
 ```
 
-Faça isso para todas as funções no `casosController.js`.
+**O que falta?** Passar os filtros do `req.query` para o repositório:
+
+```js
+async function getAllAgentes(req, res) {
+  try {
+    const filters = req.query; // Pega os filtros da query string
+    const agentes = await agentesRepository.getAllAgentes(filters);
+    res.status(200).json(agentes);
+  } catch (error) {
+    errorHandler(res, error);
+  }
+}
+```
+
+Sem isso, os filtros e ordenações não funcionam, e o bônus fica incompleto.
 
 ---
 
-### 6. **Validação de Payload e Status Codes**
+## 6. Persistência em Memória vs Banco de Dados: Atenção à Consistência! ⚙️
 
-Você já fez um bom trabalho validando campos obrigatórios e retornando 400 quando necessário. Parabéns! 🎯
+Como falei antes, o desafio espera que você use arrays em memória para armazenar agentes e casos, mas seu código está usando Knex + PostgreSQL (`db('agentes')`, `db('casos')`).
 
-Só lembre de manter essa consistência em todos os endpoints, principalmente em update parcial (PATCH), onde você já faz a validação do campo `status`.
+Se você quiser continuar assim, tudo bem para projetos reais, mas para esse desafio em específico, isso pode ser a causa de vários testes falharem, porque eles esperam manipulação em memória e não via banco.
+
+Se quiser, posso te ajudar a adaptar seus repositórios para usar arrays simples, por exemplo:
+
+```js
+let agentes = [];
+
+const getAllAgentes = async () => agentes;
+
+const getAgenteById = async (id) => agentes.find(a => a.id === id);
+
+const createAgente = async (agente) => {
+  agentes.push(agente);
+  return agente;
+};
+
+// E assim por diante...
+```
 
 ---
 
-### 7. **Tratamento de Erros**
+## Recursos para você aprofundar e corrigir esses pontos:
 
-Você está usando um `errorHandler` para centralizar erros, isso é excelente! Continue usando essa estratégia para manter seu código limpo e organizado.
+- **Sobre arquitetura MVC e organização de projetos Node.js:**  
+  https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH
 
----
+- **Entendendo rotas e middlewares no Express.js:**  
+  https://expressjs.com/pt-br/guide/routing.html
 
-### 8. **Bônus: Filtros e Ordenação**
+- **Validação de dados e tratamento de erros na API:**  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404
 
-Você tentou implementar filtros nos casos, o que é ótimo! Porém, como a função `getAllCasos` não está usando o método correto do repositório e não é assíncrona, isso não está funcionando.
-
-Depois de corrigir o uso assíncrono e o método correto, seus filtros vão funcionar melhor.
-
----
-
-## Recursos para você aprofundar e corrigir os pontos acima:
-
-- **Validação de UUID e manipulação de IDs:**  
-  https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_ (Validação de dados em APIs Node.js/Express)  
-  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400 (Status code 400 para dados inválidos)
-
-- **Organização de rotas e arquitetura MVC:**  
-  https://expressjs.com/pt-br/guide/routing.html  
-  https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH (Arquitetura MVC com Node.js)
-
-- **Assincronismo e uso correto do `await` com banco de dados:**  
-  https://youtu.be/RSZHvQomeKE (Fluxo de requisição e resposta)
-
-- **Manipulação de arrays e filtros:**  
+- **Manipulação de arrays em memória no JavaScript:**  
   https://youtu.be/glSgUKA5LjE?si=t9G2NsC8InYAU9cI
 
----
-
-## Resumo Rápido para você focar:
-
-- [ ] Corrigir as rotas em `casosRoutes.js` para remover o prefixo `/casos` nas definições, pois ele já está no `server.js`.  
-- [ ] Usar UUIDs para os IDs de agentes e casos, sem converter para números, e validar esses UUIDs em todos os endpoints.  
-- [ ] Ajustar chamadas para métodos corretos nos repositórios (`getAgenteById` e `getCasoById`), e usar `await` corretamente pois são funções assíncronas.  
-- [ ] Tornar as funções do `casosController.js` assíncronas (`async`) e usar `await` nas chamadas ao banco.  
-- [ ] Rever a validação de payload para garantir que todos os campos obrigatórios estejam sendo validados em todos os métodos.  
-- [ ] Manter o padrão de tratamento de erros com o `errorHandler` para respostas consistentes.  
+- **Conceitos básicos de Node.js e Express.js (para reforçar fundamentos):**  
+  https://youtu.be/RSZHvQomeKE
 
 ---
 
-Diego, você já tem uma base muito boa e está caminhando para construir uma API sólida! 💪 Com esses ajustes, sua API vai funcionar perfeitamente e você vai destravar todos os requisitos básicos e bônus.
+## Resumo dos principais pontos para focar agora 📋🔥
 
-Continue firme, aproveite os recursos que te passei para aprofundar seu conhecimento, e não hesite em me chamar para revisar novamente quando fizer as correções! 🚀✨
+- **Corrigir o uso dos IDs para UUIDs:** não use `parseInt`, trabalhe com strings UUID e valide o formato.  
+- **Implementar o método PATCH para agentes, incluindo rota e controller.**  
+- **Passar filtros do `req.query` para o repositório no controlador de agentes para habilitar filtros e ordenações.**  
+- **Revisar e melhorar as validações nos métodos PUT e PATCH dos casos e agentes, garantindo payloads completos ou parciais válidos.**  
+- **Se o desafio exige armazenamento em memória, adaptar seus repositórios para usar arrays ao invés do banco de dados.**  
+- **Padronizar mensagens de erro e validar IDs UUID para melhorar o tratamento de erros e respostas da API.**
 
-Um abraço de mentor,  
-Code Buddy 🤖💙
+---
+
+Diego, você está no caminho certo e já mostrou grande capacidade de estruturar seu código e implementar funcionalidades complexas! 🚀 Com esses ajustes, sua API vai ficar muito mais robusta e alinhada com o que o desafio pede. Continue firme, revise esses pontos com calma e conte comigo para o que precisar! 💙
+
+Um abraço e bons códigos! 👨‍💻✨
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 
