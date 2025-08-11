@@ -27,18 +27,27 @@ async function getAgenteById(req, res) {
 
 async function createAgente(req, res) {
   try {
+    // Pegamos os dados do corpo da requisição
     const { nome, dataDeIncorporacao, cargo } = req.body;
 
+    // Validação simples para garantir que os campos necessários existem
     if (!nome || !dataDeIncorporacao || !cargo) {
-      return res.status(400).json({ error: 'Todos os campos são obrigatórios: nome, dataDeIncorporacao, cargo' });
+      return res.status(400).json({ error: 'Campos obrigatórios ausentes: nome, dataDeIncorporacao e cargo' });
     }
+    
+    // **A CORREÇÃO ESTÁ AQUI**
+    // Criamos o objeto 'agente' com os dados corretos que o repositório espera
+    const agente = { nome, dataDeIncorporacao, cargo };
 
-    const newAgente = await agentesRepository.createAgente({ nome, dataDeIncorporacao, cargo });
+    // Passamos o objeto 'agente' para a função de criar
+    const newAgente = await agentesRepository.createAgente(agente);
+    
     res.status(201).json(newAgente);
   } catch (error) {
     errorHandler(res, error);
   }
 }
+
 
 async function updateAgente(req, res) {
   try {
@@ -81,8 +90,10 @@ async function getCasosByAgenteId(req, res) {
       const id = parseInt(req.params.id);
       const casos = await agentesRepository.getCasosByAgenteId(id);
   
-      if (!casos) {
-        return res.status(404).json({ error: 'Agente não encontrado ou não possui casos.' });
+      if (!casos || casos.length === 0) {
+        // Retorna 404 se o agente não for encontrado ou não tiver casos
+        const agente = await agentesRepository.getAgenteById(id);
+        if(!agente) return res.status(404).json({ error: 'Agente não encontrado.' });
       }
   
       res.status(200).json(casos);
