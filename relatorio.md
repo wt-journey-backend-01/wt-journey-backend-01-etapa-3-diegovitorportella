@@ -1,209 +1,281 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 4 créditos restantes para usar o sistema de feedback AI.
+Você tem 3 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para diegovitorportella:
 
 Nota final: **15.8/100**
 
-# Feedback para o(a) diegovitorportella 🚔✨
+Olá, diegovitorportella! 👋🚀
 
-Olá, Diego! Primeiro, parabéns por encarar esse desafio tão legal e complexo de construir uma API REST para o Departamento de Polícia! 👏 Você já tem uma base muito boa, com rotas, controllers e repositories bem organizados, e isso é essencial para projetos escaláveis e fáceis de manter. Vamos juntos entender como podemos deixar sua API ainda mais robusta e alinhada com o que o desafio pede? Bora lá! 🚀
-
----
-
-## 🎉 Pontos Fortes que Vi no Seu Código
-
-- Sua **estrutura modular** está bem montada! Você separou rotas, controllers e repositories, o que é ótimo para organização e manutenção.
-- O uso do `express.Router()` para definir rotas está correto, tanto para `/agentes` quanto para `/casos`.
-- Você implementou os métodos HTTP principais (GET, POST, PUT, PATCH, DELETE) para ambos os recursos, mostrando que entendeu a ideia básica de REST.
-- O tratamento de erros com `try/catch` e o uso do `errorHandler` indicam que você está preocupado(a) com a estabilidade da API — isso é excelente.
-- Vi que você validou campos obrigatórios e status code em vários endpoints, o que demonstra cuidado com a integridade dos dados.
-- Bônus: Você implementou o endpoint para buscar o agente responsável por um caso (`GET /casos/:caso_id/agente`) e também para listar casos de um agente (`GET /agentes/:id/casos`). Isso mostra iniciativa para ir além do básico! 👏
+Antes de tudo, parabéns por todo o esforço e dedicação que você colocou nesse desafio da API REST para o Departamento de Polícia! 🎉 É um projeto bem complexo, e ver que você estruturou seu código de forma modular, com controllers, repositories e rotas, mostra que você está no caminho certo para construir APIs robustas e organizadas. Além disso, você já conseguiu implementar filtros e buscas em alguns endpoints, o que é um baita bônus! 👏
 
 ---
 
-## 🔎 Onde Precisamos Dar Uma Turbinada (Análise Profunda)
+## Vamos juntos destrinchar seu código e entender onde podemos evoluir! 🔍✨
 
-### 1. IDs dos Agentes e Casos Não São UUIDs — Isso Impacta Tudo!
+### 1. Organização do Projeto e Arquitetura
 
-Um ponto crítico que observei é que, no seu código, os IDs usados para agentes e casos são tratados como números inteiros (`parseInt(req.params.id)`), e nas suas queries você busca com `where({ id })` usando números.
+Sua estrutura está muito próxima do esperado, o que é ótimo! Você tem as pastas `routes/`, `controllers/`, `repositories/`, `docs/` e `utils/`, e o arquivo `server.js` está configurado corretamente para usar as rotas e o Swagger. Isso mostra que você compreendeu bem a arquitetura MVC aplicada aqui.
 
-Por exemplo, no controller dos agentes:
+Porém, um ponto importante: no seu `package.json` e na descrição do projeto, você menciona o uso do PostgreSQL e Knex.js, e no código dos repositories você está usando consultas SQL via Knex, o que é legal para persistência real. Mas o enunciado do desafio pedia para armazenar os dados **em memória**, usando arrays. Isso é um desvio do requisito, e pode estar impactando a execução dos testes que esperam essa abordagem.
+
+**Por que isso importa?**  
+Se os testes esperam que você manipule dados em arrays na memória (sem banco de dados), mas você está usando um banco, os testes não vão encontrar os dados da forma esperada, gerando falhas em várias operações (criar, buscar, atualizar, deletar). Então, antes de partir para detalhes menores, é fundamental garantir que a camada de dados (repositories) esteja conforme o esperado: arrays em memória, não banco.
+
+---
+
+### 2. IDs: Uso de UUID vs Inteiros
+
+Um ponto que gerou penalidade no seu código foi o uso de IDs numéricos (`parseInt(req.params.id)`) para agentes e casos, enquanto o desafio pede que os IDs sejam **UUIDs**.
+
+**O que isso significa?**  
+Você está validando IDs assim:
 
 ```js
 const id = parseInt(req.params.id);
 if (isNaN(id)) return res.status(400).json({ error: 'ID do agente inválido.' });
 ```
 
-E no repository:
+Mas se o ID esperado é um UUID (uma string no formato hexadecimal com hífens), tentar converter para número sempre vai falhar ou gerar comportamento inesperado.
 
-```js
-const getAgenteById = async (id) => {
-  return await db('agentes').where({ id }).first();
-};
-```
-
-**Porém, o desafio pede IDs no formato UUID**, que são strings com um padrão específico, como `550e8400-e29b-41d4-a716-446655440000`. Isso significa que:
-
-- Você não deve usar `parseInt()` para ler o ID, pois UUID não é número.
-- A validação de ID deve checar se a string é um UUID válido.
-- As queries no banco devem usar o ID como string, não como número.
-
-**Por que isso é importante?**  
-O uso de UUIDs garante que os IDs sejam únicos globalmente e evita colisões, além de ser um requisito do desafio. Além disso, o banco e o knex esperam strings para UUIDs, e usar números pode causar falhas silenciosas ou erros.
-
----
-
-### Como corrigir esse ponto?
-
-1. **Não use `parseInt()` para IDs.** Apenas leia o ID como string:
-
-```js
-const id = req.params.id;
-```
-
-2. **Valide se o ID é um UUID válido.** Você pode usar um pacote como `uuid` para isso, que você já tem instalado (`uuid` está no seu `package.json`):
+**Como corrigir?**  
+Você deve tratar o ID como string e validar se ele tem o formato UUID. Para isso, pode usar uma biblioteca como `uuid` para validar, ou uma regex simples. Por exemplo:
 
 ```js
 const { validate: isUuid } = require('uuid');
 
-if (!isUuid(id)) {
-  return res.status(400).json({ error: 'ID do agente inválido. Deve ser UUID.' });
+const id = req.params.id;
+if (!isUuid(id)) return res.status(400).json({ error: 'ID do agente inválido.' });
+```
+
+Assim, você garante que o ID está no formato correto e evita erros na busca.
+
+---
+
+### 3. Endpoints e Métodos HTTP
+
+Você implementou os endpoints principais para `/agentes` e `/casos` com todos os métodos HTTP esperados (GET, POST, PUT, PATCH, DELETE), o que é excelente! 🎯
+
+No entanto, percebi que no controller dos casos, você reutiliza a função `updateCaso` para os métodos PUT e PATCH:
+
+```js
+patchCaso: updateCaso, // Reutiliza a mesma lógica de update
+```
+
+Isso pode ser um problema, porque PUT e PATCH têm semânticas diferentes:
+
+- **PUT**: Atualiza todo o recurso, espera que todos os campos estejam presentes no payload.
+- **PATCH**: Atualiza parcialmente, aceita apenas os campos que precisam ser alterados.
+
+No seu código, a função `updateCaso` não diferencia esses casos, o que pode causar falhas em validações específicas para PATCH, como verificar payload incompleto ou inválido.
+
+**Sugestão:** Separe as funções para PUT e PATCH para validar corretamente:
+
+```js
+async function updateCasoPut(req, res) {
+  // Validar que todos os campos obrigatórios estão presentes
+  // Atualizar o caso completo
+}
+
+async function updateCasoPatch(req, res) {
+  // Validar apenas os campos enviados no payload
+  // Atualizar parcialmente o caso
 }
 ```
 
-3. **No seu repository, mantenha a busca por ID como string:**
+Isso vai melhorar a robustez e o atendimento dos requisitos.
+
+---
+
+### 4. Validação de Payload e Tratamento de Erros
+
+Você fez um bom trabalho validando os campos obrigatórios para criação e atualização, retornando status 400 quando algo está errado, e 404 quando o recurso não é encontrado. Isso é essencial para uma API amigável e confiável! 👍
+
+Exemplo no `createCaso`:
 
 ```js
-const getAgenteById = async (id) => {
-  return await db('agentes').where({ id }).first();
+if (!titulo || !descricao || !status || !agente_id) {
+  return res.status(400).json({ message: 'Campos obrigatórios ausentes.' });
+}
+if (status !== 'aberto' && status !== 'solucionado') {
+  return res.status(400).json({ message: "O campo 'status' pode ser somente 'aberto' ou 'solucionado'." });
+}
+```
+
+Muito bom!
+
+Porém, como você está usando Knex e banco, e o desafio pedia arrays em memória, a validação pode precisar ser ajustada para refletir a estrutura dos dados em memória.
+
+---
+
+### 5. Filtros e Ordenação (Bônus)
+
+Você tentou implementar filtros nos endpoints de agentes e casos, usando query params, como `cargo`, `status`, `agente_id`, e ordenação por `dataDeIncorporacao`. Isso é ótimo para deixar a API mais poderosa! 👏
+
+No entanto, ao usar Knex, você usou o operador `ilike` que é específico do PostgreSQL para case-insensitive search, o que não funcionaria para arrays em memória.
+
+Se você migrar para arrays em memória, vai precisar implementar esses filtros manualmente, usando métodos como `filter()` e `sort()` do JavaScript.
+
+Exemplo para filtro por cargo em memória:
+
+```js
+const agentesFiltrados = agentes.filter(agente => agente.cargo.toLowerCase() === filters.cargo.toLowerCase());
+```
+
+---
+
+### 6. Um Detalhe Importante: Uso de Banco de Dados vs Dados em Memória
+
+Como você está usando Knex e PostgreSQL, seu código está muito próximo de um projeto real, o que é ótimo para aprendizado futuro. Mas o desafio pediu expressamente para usar **dados em memória** (arrays), o que impacta diretamente no funcionamento da API e na avaliação.
+
+**Por que isso é tão importante?**  
+- Os testes esperam que os dados estejam em arrays que você controla, sem conexão com banco.
+- Você pode manipular os dados diretamente, sem precisar de async/await.
+- Isso facilita o entendimento inicial de CRUD e manipulação de dados.
+
+---
+
+## Recapitulando e Recomendações para Você 🚀
+
+### O que você já mandou bem:
+
+- Organização modular do projeto com rotas, controllers e repositories.
+- Implementação dos endpoints REST com os métodos corretos.
+- Validação dos dados e tratamento de erros com status HTTP apropriados.
+- Implementação de filtros e buscas (bônus) nos endpoints.
+- Uso da ferramenta Swagger para documentação.
+
+---
+
+### Pontos que precisam de atenção para melhorar muito seu projeto:
+
+1. **Mudar o armazenamento para arrays em memória**, conforme o enunciado do desafio, para atender aos testes e requisitos.  
+   - Isso vai fazer toda a sua API funcionar conforme esperado.  
+   - Para aprender mais sobre manipulação de arrays em JavaScript, recomendo este vídeo:  
+     ▶️ https://youtu.be/glSgUKA5LjE?si=t9G2NsC8InYAU9cI
+
+2. **Tratar os IDs como UUIDs**, não números inteiros.  
+   - Ajuste a validação para aceitar strings no formato UUID.  
+   - Veja como fazer isso com a biblioteca `uuid`:  
+     ▶️ https://www.npmjs.com/package/uuid  
+   - Para entender melhor a validação de IDs e erros 400/404, confira:  
+     ▶️ https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400  
+     ▶️ https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404
+
+3. **Diferenciar os métodos PUT e PATCH** para garantir que as atualizações sejam feitas corretamente, respeitando a semântica de cada método.  
+   - Veja este vídeo para entender melhor o protocolo HTTP e métodos:  
+     ▶️ https://youtu.be/RSZHvQomeKE
+
+4. **Adaptar os filtros para funcionar com arrays em memória**, usando os métodos JavaScript ao invés de métodos SQL.  
+   - Isso é fundamental para que os filtros funcionem corretamente no seu repositório em memória.
+
+5. **Garantir que a estrutura do projeto siga o padrão MVC e que cada camada tenha sua responsabilidade clara**, o que você já está fazendo bem! Continue assim!  
+   - Para aprofundar na arquitetura MVC em Node.js, recomendo:  
+     ▶️ https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH
+
+---
+
+## Um exemplo simples de repositório em memória para agentes:
+
+```js
+// repositories/agentesRepository.js
+const { v4: uuidv4 } = require('uuid');
+
+let agentes = [];
+
+const getAllAgentes = (filters = {}) => {
+  let result = agentes;
+
+  if (filters.cargo) {
+    result = result.filter(a => a.cargo.toLowerCase() === filters.cargo.toLowerCase());
+  }
+
+  if (filters.sort) {
+    const order = filters.sort.startsWith('-') ? 'desc' : 'asc';
+    const column = order === 'desc' ? filters.sort.substring(1) : 'dataDeIncorporacao';
+    result = result.sort((a, b) => {
+      if (a[column] < b[column]) return order === 'asc' ? -1 : 1;
+      if (a[column] > b[column]) return order === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  return result;
+};
+
+const getAgenteById = (id) => agentes.find(a => a.id === id);
+
+const createAgente = (agente) => {
+  const newAgente = { id: uuidv4(), ...agente };
+  agentes.push(newAgente);
+  return newAgente;
+};
+
+const updateAgente = (id, dados) => {
+  const index = agentes.findIndex(a => a.id === id);
+  if (index === -1) return null;
+  agentes[index] = { ...agentes[index], ...dados };
+  return agentes[index];
+};
+
+const deleteAgente = (id) => {
+  const index = agentes.findIndex(a => a.id === id);
+  if (index === -1) return false;
+  agentes.splice(index, 1);
+  return true;
+};
+
+module.exports = {
+  getAllAgentes,
+  getAgenteById,
+  createAgente,
+  updateAgente,
+  deleteAgente
 };
 ```
 
-Assim, o knex fará a query correta.
+Esse padrão vai garantir que você esteja no caminho certo para cumprir o desafio com sucesso!
 
 ---
 
-### 2. Isso Explica Muitos Outros Problemas
+## Resumo Rápido dos Focos para Melhorar 📝
 
-Por causa desse erro fundamental no tratamento de IDs, outros testes e funcionalidades não funcionam:
-
-- Buscar agentes ou casos por ID retorna 404 porque o ID não bate com o formato esperado no banco.
-- Atualizações, deleções e criações falham porque o ID não é gerado nem validado corretamente.
-- Validação de payloads para criação e atualização também fica comprometida.
-
-Ou seja, **antes de tentar ajustar validações específicas de campos ou filtros, precisamos garantir que o identificador principal (ID) esteja correto e consistente.**
+- [ ] Use **arrays em memória** para armazenar os dados, não banco de dados.
+- [ ] Trate os IDs como **UUIDs**, com validação adequada.
+- [ ] Separe o tratamento de PUT e PATCH para respeitar suas diferenças.
+- [ ] Implemente filtros e ordenação usando métodos JavaScript para arrays.
+- [ ] Continue com a organização modular e tratamento de erros, que já está muito bom.
 
 ---
 
-### 3. Arquitetura e Organização do Projeto
+diegovitorportella, você está construindo uma base muito boa, e com esses ajustes vai conseguir destravar todas as funcionalidades que o desafio pede! 💪✨
 
-Sua estrutura de pastas e arquivos está muito boa e segue o padrão esperado:
-
-```
-├── routes/
-│   ├── agentesRoutes.js
-│   └── casosRoutes.js
-├── controllers/
-│   ├── agentesController.js
-│   └── casosController.js
-├── repositories/
-│   ├── agentesRepository.js
-│   └── casosRepository.js
-├── utils/
-│   └── errorHandler.js
-├── server.js
-```
-
-Parabéns por isso! Manter essa organização vai te ajudar muito conforme o projeto crescer.
+Se quiser, posso ajudar com exemplos práticos para qualquer uma dessas etapas. Continue firme, e não desanime! Aprender a construir APIs robustas é um passo enorme para sua carreira! 🚀🔥
 
 ---
 
-### 4. Sobre o Uso do Knex e Banco de Dados
+### Recursos para você se aprofundar:
 
-Vi que você está usando Knex e PostgreSQL, o que é ótimo para persistência real. Só reforço que, para trabalhar com UUID no banco, você precisa garantir que as colunas `id` das tabelas `agentes` e `casos` estão definidas como UUID no banco e que o Knex está configurado para gerar UUIDs automaticamente (ou você gera no código antes de inserir).
+- Fundamentos de API REST com Express.js:  
+  https://youtu.be/RSZHvQomeKE  
+  https://expressjs.com/pt-br/guide/routing.html
 
-Se ainda não fez isso, aqui está uma referência rápida para criar colunas UUID nas migrations:
+- Arquitetura MVC em Node.js:  
+  https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH
 
-```js
-table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-```
+- Validação de dados e tratamento de erros HTTP:  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404
 
-E no seu código, ao criar um novo agente ou caso, você não precisa passar o ID, pois o banco gera automaticamente.
-
----
-
-### 5. Validações e Tratamento de Erros
-
-Você fez um bom trabalho validando campos obrigatórios e status code. Apenas lembre-se de adaptar a validação de IDs para UUID, conforme expliquei.
-
-Também sugiro melhorar a consistência das mensagens de erro, por exemplo:
-
-```js
-return res.status(400).json({ error: 'ID do agente inválido. Deve ser UUID.' });
-```
-
-Em vez de usar `message` em uns lugares e `error` em outros, escolha um padrão para facilitar o consumo da API.
+- Manipulação de arrays em JavaScript (para dados em memória):  
+  https://youtu.be/glSgUKA5LjE?si=t9G2NsC8InYAU9cI
 
 ---
 
-### 6. Sobre os Filtros e Funcionalidades Bônus
+Conte comigo para o que precisar! Vamos juntos transformar seu código em uma API nota 100! 🚓👮‍♂️💻
 
-Você tentou implementar filtros e buscas avançadas, o que é ótimo! Porém, percebi que elas não estão totalmente funcionando conforme esperado.
-
-Isso pode estar relacionado à forma como você manipula os dados e como as rotas estão definidas.
-
-Minha sugestão é:
-
-- Primeiro, foque em garantir que os endpoints básicos funcionem perfeitamente, com IDs UUID válidos.
-- Depois, implemente os filtros e ordenações usando `req.query` no controller, aplicando corretamente nos repositories.
-- Para manipular arrays e filtros, o vídeo [Manipulação de Arrays e Dados em Memória](https://youtu.be/glSgUKA5LjE?si=t9G2NsC8InYAU9cI) pode te ajudar bastante.
-
----
-
-## 📚 Recursos para Você Aprofundar e Corrigir
-
-- **UUID e validação de IDs:**  
-  [Documentação do pacote uuid](https://www.npmjs.com/package/uuid)  
-  [Como validar UUID com uuid](https://stackoverflow.com/questions/136505/searching-for-uuid-v4-regex)
-
-- **Fundamentos de API REST e Express.js:**  
-  [Express.js Routing (oficial)](https://expressjs.com/pt-br/guide/routing.html)  
-  [Criando APIs RESTful com Express](https://youtu.be/RSZHvQomeKE)
-
-- **Validação de Dados e Tratamento de Erros:**  
-  [Status 400 - Bad Request (MDN)](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400)  
-  [Status 404 - Not Found (MDN)](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404)  
-  [Validação de dados em APIs Node.js/Express](https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_)
-
-- **Manipulação de Arrays e Dados em Memória:**  
-  [Manipulação de Arrays no JavaScript](https://youtu.be/glSgUKA5LjE?si=t9G2NsC8InYAU9cI)
-
----
-
-## 📝 Resumo dos Principais Pontos para Focar
-
-- ✅ **Corrigir o tratamento de IDs para usar UUIDs**, removendo `parseInt` e validando com `uuid.validate()`.
-- ✅ Garantir que o banco de dados está configurado para usar UUIDs nas colunas `id`.
-- ✅ Ajustar controllers e repositories para trabalhar com IDs como strings UUID.
-- ✅ Revisar e padronizar as mensagens de erro e status codes para melhorar a clareza da API.
-- ✅ Depois de corrigir IDs, revisar filtros e funcionalidades extras para garantir que funcionem corretamente.
-- ✅ Continuar mantendo a arquitetura modular e o tratamento de erros consistente.
-
----
-
-Diego, você já está no caminho certo, com uma base sólida e boa organização! 🌟 Corrigindo o uso dos IDs para UUID, você vai destravar várias funcionalidades e seu projeto vai ficar muito mais alinhado com as boas práticas de APIs RESTful modernas.
-
-Continue firme, e não hesite em voltar aqui para tirar dúvidas! Estou torcendo pelo seu sucesso! 💪🚀
-
-Um abraço do seu Code Buddy! 🤖❤️
-
----
-
-Se quiser, comece revisando o capítulo sobre UUIDs e validação de IDs, e depois volte para ajustar os controllers e repositories. Vai dar tudo certo! 😉
-
-# Keep coding and keep shining! ✨✨✨
+Abraços de Code Buddy! 🤖❤️
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 
